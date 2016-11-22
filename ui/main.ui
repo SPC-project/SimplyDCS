@@ -68,9 +68,25 @@
     <property name="title">
      <string>Файл</string>
     </property>
+    <addaction name="m_save"/>
+    <addaction name="separator"/>
     <addaction name="m_exit"/>
    </widget>
+   <widget class="QMenu" name="menu_2">
+    <property name="title">
+     <string>Правка</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menu_3">
+    <property name="title">
+     <string>Помощь</string>
+    </property>
+    <addaction name="m_tips"/>
+    <addaction name="action"/>
+   </widget>
    <addaction name="menu"/>
+   <addaction name="menu_2"/>
+   <addaction name="menu_3"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBar">
@@ -81,7 +97,7 @@
     <enum>TopToolBarArea</enum>
    </attribute>
    <attribute name="toolBarBreak">
-    <bool>true</bool>
+    <bool>false</bool>
    </attribute>
    <addaction name="m_clear"/>
   </widget>
@@ -102,13 +118,44 @@
   </action>
   <action name="m_clear">
    <property name="icon">
-    <iconset theme="edit-clear"/>
+    <iconset theme="edit-clear">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>Очистить</string>
    </property>
    <property name="toolTip">
     <string>Очистить рабочее поле</string>
+   </property>
+  </action>
+  <action name="m_save">
+   <property name="icon">
+    <iconset theme="document-save"/>
+   </property>
+   <property name="text">
+    <string>Сохранить как</string>
+   </property>
+   <property name="toolTip">
+    <string>Сохранить рабочее пространство</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="m_tips">
+   <property name="text">
+    <string>Подсказки</string>
+   </property>
+   <property name="toolTip">
+    <string>Перечень команд, описание функционала</string>
+   </property>
+   <property name="shortcut">
+    <string>F1</string>
+   </property>
+  </action>
+  <action name="action">
+   <property name="text">
+    <string>Авторы</string>
    </property>
   </action>
  </widget>
