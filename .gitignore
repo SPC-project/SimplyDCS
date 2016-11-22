@@ -1,6 +1,7 @@
 *.swp 
 *.pyc
-kivy_version/
 *.txt
 *.pmd
 *.log
+text2im/examples
+text2im/CHANGELOG
