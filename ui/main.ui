@@ -24,16 +24,6 @@
      </rect>
     </property>
    </widget>
-   <widget class="QListView" name="listView">
-    <property name="geometry">
-     <rect>
-      <x>510</x>
-      <y>250</y>
-      <width>221</width>
-      <height>81</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QTextBrowser" name="textBrowser_2">
     <property name="geometry">
      <rect>
@@ -54,6 +44,16 @@
      </rect>
     </property>
    </widget>
+   <widget class="QListWidget" name="listWidget">
+    <property name="geometry">
+     <rect>
+      <x>510</x>
+      <y>250</y>
+      <width>221</width>
+      <height>81</height>
+     </rect>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -61,7 +61,7 @@
      <x>0</x>
      <y>0</y>
      <width>763</width>
-     <height>30</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
@@ -130,7 +130,8 @@
   </action>
   <action name="m_save">
    <property name="icon">
-    <iconset theme="document-save"/>
+    <iconset theme="document-save">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>Сохранить как</string>
@@ -163,7 +164,6 @@
   <tabstop>input_area</tabstop>
   <tabstop>output_area</tabstop>
   <tabstop>textBrowser_2</tabstop>
-  <tabstop>listView</tabstop>
  </tabstops>
  <resources/>
  <connections/>
