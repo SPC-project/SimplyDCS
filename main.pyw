@@ -14,12 +14,15 @@ from traceback import format_exception
 
 
 class MyWindow(QMainWindow):
+    CMD_BUFF_MAX_LEN = 25
+    CMD_PREFIX = '<b>⇒</b>'
+    # Константы для парсинга выражений
     LTr_pattern = re.compile('^laplace_transform\(.*\)')
     LTr_params = ", t, s, noconds=True"  # для работы laplace_transform
     InvLTr_pattern = re.compile('inverse_laplace_transform\(.*\)')
     InvLTr_params = ", s, t"  # для работы inverse_laplace_transform
-    CMD_BUFF_MAX_LEN = 25
-    CMD_PREFIX = '<b>⇒</b>'
+    ZTr_name = "z_transform"
+    ZTr_pattern = re.compile(ZTr_name + "\(.*\)")
 
     def __init__(self):
         super(MyWindow, self).__init__()
@@ -33,6 +36,7 @@ class MyWindow(QMainWindow):
         self.variables = {
             't': sympy.Symbol('t', positive=True),
             's': sympy.Symbol('s'),
+            'z': sympy.Symbol('z')
         }
         self.cmd_buffer = ""
         self.cmd_buffer_len = 0
@@ -57,18 +61,25 @@ class MyWindow(QMainWindow):
 
     def parse_expr(self, expr):
         """ Приводим пользовательскую команду к приемлемому SymPy виду """
-        result = re.search(self.LTr_pattern, expr)
-        if result:  # laplace_transform fixes
-            print("work")
-            i = result.end()-1
+        # laplace_transform preparation
+        match = re.search(self.LTr_pattern, expr)
+        if match:
+            i = match.end()-1
             expr = expr[:i] + self.LTr_params + expr[i:]
 
-        result = re.search(self.InvLTr_pattern, expr)
-        if result:  # inverse_laplace_transform fixes
-            i = result.end()-1
+        # inverse_laplace_transform preparation
+        match = re.search(self.InvLTr_pattern, expr)
+        if match:
+            i = match.end()-1
             expr = expr[:i] + self.InvLTr_params + expr[i:]
 
-        expr = re.sub(r"\^", "**", expr)  # Python's exponentiation operator
+        # Z-transform execution
+        match = re.search(self.ZTr_pattern, expr)
+        if match:
+            expr = self.forward_z_transform(expr)
+
+        # use Python's exponentiation operator
+        expr = re.sub(r"\^", "**", expr)
 
         return sympy_parser.parse_expr(expr, local_dict=self.variables)
 
@@ -83,6 +94,10 @@ class MyWindow(QMainWindow):
         self.variables[name] = self.parse_expr(expr)
 
         return name + " = " + str(self.variables[name])
+
+    def forward_z_transform(self, to_transform_expr):
+        """ Разложить на простые множители и каждый заменить по таблице """
+        return "z"
 
     def output(self, sympy_obj):
         # TODO LaTeX here
@@ -113,7 +128,6 @@ class MyWindow(QMainWindow):
         self.statusbar.addWidget(self.error_desc)
 
     def remind_about_log(self):
-        print("Here")
         msg = QMessageBox(QMessageBox.Critical, "Ошибка!",
                           "Данные об ошибке записаны в файл errors.log")
         msg.exec_()
@@ -123,8 +137,10 @@ def handel_exceptions(type_, value, tback):
     """
     Перехватывает исключения, логгирует их и не позволяет уронить программу
     """
-    logging.error(''.join(format_exception(type_, value, tback)))
+    error_msg = ''.join(format_exception(type_, value, tback))
+    logging.error(error_msg)
     sys.__excepthook__(type_, value, tback)
+    print(error_msg)
     window.shit_happens()
 
 
