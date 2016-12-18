@@ -22,7 +22,8 @@ class MyWindow(QMainWindow):
     InvLTr_pattern = re.compile('inverse_laplace_transform\(.*\)')
     InvLTr_params = ", s, t"  # для работы inverse_laplace_transform
     ZTr_name = "z_transform"
-    ZTr_pattern = re.compile(ZTr_name + "\(.*\)")
+    ZTr_offset = len(ZTr_name)
+    ZTr_pattern = re.compile("^" + ZTr_name + "\(.*\)")
 
     def __init__(self):
         super(MyWindow, self).__init__()
@@ -35,6 +36,7 @@ class MyWindow(QMainWindow):
 
         self.variables = {
             't': sympy.Symbol('t', positive=True),
+            'T': sympy.Symbol('T', positive=True),
             's': sympy.Symbol('s'),
             'z': sympy.Symbol('z')
         }
@@ -55,7 +57,15 @@ class MyWindow(QMainWindow):
         elif text in self.variables:
             result = self.variables[text]
         else:
-            result = self.parse_expr(text)
+            match = re.search(self.ZTr_pattern, text)
+            if match:
+                # Z-transform
+                i = match.start() + self.ZTr_offset + 1  # +1 for '(' symbol
+                j = match.end() - 1
+                result = self.forward_z_transform(text[i:j])
+            else:
+                # Other command
+                result = self.parse_expr(text)
 
         self.output(result)
 
@@ -72,11 +82,6 @@ class MyWindow(QMainWindow):
         if match:
             i = match.end()-1
             expr = expr[:i] + self.InvLTr_params + expr[i:]
-
-        # Z-transform execution
-        match = re.search(self.ZTr_pattern, expr)
-        if match:
-            expr = self.forward_z_transform(expr)
 
         # use Python's exponentiation operator
         expr = re.sub(r"\^", "**", expr)
@@ -97,7 +102,32 @@ class MyWindow(QMainWindow):
 
     def forward_z_transform(self, to_transform_expr):
         """ Разложить на простые множители и каждый заменить по таблице """
-        return "z"
+        expr = "apart(collect(simplify(" + to_transform_expr + "), s), s)"
+        summands = self.parse_expr(expr)
+        res = ""
+        if isinstance(summands, sympy.Add):
+            for summand in summands.args:
+                res += self.table_forward_z_transform(summand)
+        else:
+            res = self.table_forward_z_transform(summands)
+        return res[2:]  # remove lead '+'/'-'
+
+    def table_forward_z_transform(self, expr):
+        """ expr - объект SymPy """
+        expr = str(expr)
+        res = " + "
+        if expr[0] == '-':
+            res = " - "
+            expr = expr[1:]
+
+        if expr == "1/s":
+            res += "z/(z-1)"
+        elif expr == "s**(-2)" or expr == "1/s**2":
+            res += "T*z/(z-1)^2"
+        else:
+            res += "shit"
+
+        return res
 
     def output(self, sympy_obj):
         # TODO LaTeX here
