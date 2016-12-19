@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QMessageBox
+from PyQt5.QtWidgets import QDialog
 from PyQt5 import uic
 
 import sympy
 from sympy.parsing import sympy_parser
+from sympy import exp, sin, cos, pi, E, I
 
 import sys
 import re
@@ -24,6 +26,8 @@ class MyWindow(QMainWindow):
     ZTr_name = "z_transform"
     ZTr_offset = len(ZTr_name)
     ZTr_pattern = re.compile("^" + ZTr_name + "\(.*\)")
+    num_pat = "(pi|E|[0-9]+)"
+    ZTr_tabble1 = re.compile("^1/\(s [+-] " + num_pat + "\)$")
 
     def __init__(self):
         super(MyWindow, self).__init__()
@@ -32,6 +36,7 @@ class MyWindow(QMainWindow):
         self.input_area.returnPressed.connect(self.process_input)
         self.m_exit.triggered.connect(self.close)
         self.m_clear.triggered.connect(self.clear_cmd_buffer)
+        self.m_tips.triggered.connect(self.show_help)
         self.output_area.anchorClicked.connect(self.remind_about_log)
 
         self.variables = {
@@ -57,15 +62,8 @@ class MyWindow(QMainWindow):
         elif text in self.variables:
             result = self.variables[text]
         else:
-            match = re.search(self.ZTr_pattern, text)
-            if match:
-                # Z-transform
-                i = match.start() + self.ZTr_offset + 1  # +1 for '(' symbol
-                j = match.end() - 1
-                result = self.forward_z_transform(text[i:j])
-            else:
-                # Other command
-                result = self.parse_expr(text)
+            # Other command
+            result = self.parse_expr(text)
 
         self.output(result)
 
@@ -82,6 +80,13 @@ class MyWindow(QMainWindow):
         if match:
             i = match.end()-1
             expr = expr[:i] + self.InvLTr_params + expr[i:]
+
+        # Z-transform
+        match = re.search(self.ZTr_pattern, expr)
+        if match:
+            i = match.start() + self.ZTr_offset + 1  # +1 for '(' symbol
+            j = match.end() - 1
+            expr = self.forward_z_transform(expr[i:j])
 
         # use Python's exponentiation operator
         expr = re.sub(r"\^", "**", expr)
@@ -110,10 +115,17 @@ class MyWindow(QMainWindow):
                 res += self.table_forward_z_transform(summand)
         else:
             res = self.table_forward_z_transform(summands)
-        return res[2:]  # remove lead '+'/'-'
+
+        if res[0] == '+':
+            res = res[2:]  # remove lead '+'
+
+        return res
 
     def table_forward_z_transform(self, expr):
         """ expr - объект SymPy """
+        if expr.is_number:  # deal with constants
+            return str(expr)
+
         expr = str(expr)
         res = " + "
         if expr[0] == '-':
@@ -124,8 +136,18 @@ class MyWindow(QMainWindow):
             res += "z/(z-1)"
         elif expr == "s**(-2)" or expr == "1/s**2":
             res += "T*z/(z-1)^2"
+        elif expr == "s**(-3)" or expr == "1/s**3":
+            res += "T^2*z*(z+1)/(z-1)^3"
+        elif re.search(self.ZTr_tabble1, expr):
+            coef = expr[5:-1]
+            # Swap sign because table says to do it
+            if coef[0] == '+':
+                coef = "-" + coef[1:]
+            else:
+                coef = "+" + coef[1:]
+            res += "z/(z-exp(" + coef + "*T))"
         else:
-            res += "shit"
+            raise ValueError("Can not transform expression: " + expr)
 
         return res
 
@@ -162,15 +184,20 @@ class MyWindow(QMainWindow):
                           "Данные об ошибке записаны в файл errors.log")
         msg.exec_()
 
+    def show_help(self):
+        help_you = QDialog()
+        uic.loadUi('ui/help.ui', help_you)
+        help_you.exec_()
+
 
 def handel_exceptions(type_, value, tback):
     """
     Перехватывает исключения, логгирует их и не позволяет уронить программу
     """
     error_msg = ''.join(format_exception(type_, value, tback))
-    logging.error(error_msg)
+    error_expr = window.input_area.text()
+    logging.error(error_msg + 'Current expression: ' + error_expr + '\n')
     sys.__excepthook__(type_, value, tback)
-    print(error_msg)
     window.shit_happens()
 
 

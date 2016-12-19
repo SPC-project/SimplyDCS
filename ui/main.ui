@@ -61,7 +61,7 @@
      <x>0</x>
      <y>0</y>
      <width>763</width>
-     <height>21</height>
+     <height>30</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
@@ -99,7 +99,9 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="m_save"/>
    <addaction name="m_clear"/>
+   <addaction name="m_tips"/>
   </widget>
   <action name="m_exit">
    <property name="icon">
@@ -144,6 +146,9 @@
    </property>
   </action>
   <action name="m_tips">
+   <property name="icon">
+    <iconset theme="help-about"/>
+   </property>
    <property name="text">
     <string>Подсказки</string>
    </property>
