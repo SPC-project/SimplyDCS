@@ -19,6 +19,7 @@ class MyWindow(QMainWindow):
     CMD_BUFF_MAX_LEN = 25
     CMD_PREFIX = '<b>⇒</b>'
     # Константы для парсинга выражений
+    Plt_pattern = re.compile('^plot\(.*\)')
     LTr_pattern = re.compile('^laplace_transform\(.*\)')
     LTr_params = ", t, s, noconds=True"  # для работы laplace_transform
     InvLTr_pattern = re.compile('inverse_laplace_transform\(.*\)')
@@ -61,6 +62,9 @@ class MyWindow(QMainWindow):
             result = self.assign_action(text)
         elif text in self.variables:
             result = self.variables[text]
+        elif re.search(self.Plt_pattern, text):
+            text = text[5:-1]
+            self.plot(text)
         else:
             # Other command
             result = self.parse_expr(text)
@@ -189,6 +193,8 @@ class MyWindow(QMainWindow):
         uic.loadUi('ui/help.ui', help_you)
         help_you.exec_()
 
+    def plot(self, expr):
+        print(expr)
 
 def handel_exceptions(type_, value, tback):
     """
