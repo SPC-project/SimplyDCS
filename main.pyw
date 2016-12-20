@@ -128,14 +128,21 @@ class MyWindow(QMainWindow):
     def table_forward_z_transform(self, expr):
         """ expr - объект SymPy """
         if expr.is_number:  # deal with constants
-            return str(expr)
+            return ""
+
+        res = " + "
+        if isinstance(expr, sympy.Mul):
+            for arg in expr.args:
+                if arg.is_number:
+                    if arg != 1:
+                        expr = expr / arg
+                        if arg < 0:
+                            res = str(arg) + "*"
+                        else:
+                            res += str(arg) + "*"
+
 
         expr = str(expr)
-        res = " + "
-        if expr[0] == '-':
-            res = " - "
-            expr = expr[1:]
-
         if expr == "1/s":
             res += "z/(z-1)"
         elif expr == "s**(-2)" or expr == "1/s**2":
@@ -195,6 +202,7 @@ class MyWindow(QMainWindow):
 
     def plot(self, expr):
         print(expr)
+
 
 def handel_exceptions(type_, value, tback):
     """
