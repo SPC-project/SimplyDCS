@@ -29,6 +29,7 @@ class MyWindow(QMainWindow):
     ZTr_pattern = re.compile("^" + ZTr_name + "\(.*\)")
     num_pat = "(pi|E|[0-9]+)"
     ZTr_tabble1 = re.compile("^1/\(s [+-] " + num_pat + "\)$")
+    ZTr_tabble_cos = re.compile("^s/\(s\*\*2 \+ " + num_pat + "\)$")
 
     def __init__(self):
         super(MyWindow, self).__init__()
@@ -128,7 +129,7 @@ class MyWindow(QMainWindow):
     def table_forward_z_transform(self, expr):
         """ expr - объект SymPy """
         if expr.is_number:  # deal with constants
-            return ""
+            raise ValueError("Get constant to s->z transform: " + str(expr))
 
         res = " + "
         if isinstance(expr, sympy.Mul):
@@ -140,7 +141,6 @@ class MyWindow(QMainWindow):
                             res = str(arg) + "*"
                         else:
                             res += str(arg) + "*"
-
 
         expr = str(expr)
         if expr == "1/s":
@@ -157,6 +157,11 @@ class MyWindow(QMainWindow):
             else:
                 coef = "+" + coef[1:]
             res += "z/(z-exp(" + coef + "*T))"
+        elif re.search(self.ZTr_tabble_cos, expr):
+            coef = expr[10:-1]  # length of 's/(s**2 + '
+            coef = 'sqrt(' + str(coef) + ')'
+            cos_ = "cos(" + coef + "*T)"
+            res += "(z^2 - z*" + cos_ + ") / (z^2 - 2*z*" + cos_ + " + 1)"
         else:
             raise ValueError("Can not transform expression: " + expr)
 
