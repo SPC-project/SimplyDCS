@@ -30,6 +30,7 @@ class MyWindow(QMainWindow):
     num_pat = "(pi|E|[0-9]+)"
     ZTr_tabble1 = re.compile("^1/\(s [+-] " + num_pat + "\)$")
     ZTr_tabble_cos = re.compile("^s/\(s\*\*2 \+ " + num_pat + "\)$")
+    ZTr_tabble_sin = re.compile("^1/\(s\*\*2 \+ " + num_pat + "\)$")
 
     def __init__(self):
         super(MyWindow, self).__init__()
@@ -58,6 +59,9 @@ class MyWindow(QMainWindow):
         self.input_area.selectAll()
         text = self.input_area.text()
         result = None
+
+        if text.count('(') != text.count(')'):
+            raise ValueError("Количество круглых скобок не совпадает!")
 
         if '=' in text:  # TODO: будут ошибки в выражениях со сравнением: "=="
             result = self.assign_action(text)
@@ -112,14 +116,18 @@ class MyWindow(QMainWindow):
 
     def forward_z_transform(self, to_transform_expr):
         """ Разложить на простые множители и каждый заменить по таблице """
-        expr = "apart(collect(simplify(" + to_transform_expr + "), s), s)"
-        summands = self.parse_expr(expr)
+        command = "apart(collect(simplify(" + to_transform_expr + "), s), s)"
+        expr = self.parse_expr(command)
         res = ""
-        if isinstance(summands, sympy.Add):
-            for summand in summands.args:
+        if isinstance(expr, sympy.Add):
+            for summand in expr.args:
+                if summand.is_number:  # deal with constants
+                    raise ValueError("Получили константу в z-преобразовании: "
+                                     + str(expr))
+
                 res += self.table_forward_z_transform(summand)
         else:
-            res = self.table_forward_z_transform(summands)
+            res = self.table_forward_z_transform(expr)
 
         if res[0] == '+':
             res = res[2:]  # remove lead '+'
@@ -128,16 +136,15 @@ class MyWindow(QMainWindow):
 
     def table_forward_z_transform(self, expr):
         """ expr - объект SymPy """
-        if expr.is_number:  # deal with constants
-            raise ValueError("Get constant to s->z transform: " + str(expr))
-
         res = " + "
+        expr_coef = None
         if isinstance(expr, sympy.Mul):
             for arg in expr.args:
                 if arg.is_number:
                     if arg != 1:
                         expr = expr / arg
-                        if arg < 0:
+                        expr_coef = arg
+                        if arg < 0:  # change '+ <expr>' to '- <expr>'
                             res = str(arg) + "*"
                         else:
                             res += str(arg) + "*"
@@ -158,12 +165,26 @@ class MyWindow(QMainWindow):
                 coef = "+" + coef[1:]
             res += "z/(z-exp(" + coef + "*T))"
         elif re.search(self.ZTr_tabble_cos, expr):
-            coef = expr[10:-1]  # length of 's/(s**2 + '
+            coef = expr[10:-1]  # get number; 10: length of 's/(s**2 + '
             coef = 'sqrt(' + str(coef) + ')'
             cos_ = "cos(" + coef + "*T)"
             res += "(z^2 - z*" + cos_ + ") / (z^2 - 2*z*" + cos_ + " + 1)"
+        elif re.search(self.ZTr_tabble_sin, expr):
+            coef = expr[10:-1]  # get number; 10: '1/(s**2 + '
+            if coef == "1" and not expr_coef:
+                # ignore added previously to 'res' 'expr_coef'
+                res = "z*sin(T) / (z^2 - 2*z*cos(T) + 1)"
+            elif expr_coef:
+                delta = abs(sympy.sqrt(float(coef)) - expr_coef)
+                if delta < 0.00001:
+                    # ignore added previously to 'res' 'expr_coef'
+                    b = str(expr_coef)
+                    res = "z*sin(" + b + "*T) "
+                    res += "/ (z^2 - 2*z*cos(" + b + "*T) + 1)"
+            else:
+                raise ValueError("Не известно как преобразовать: " + expr)
         else:
-            raise ValueError("Can not transform expression: " + expr)
+            raise ValueError("Не ясно как преобразовать: " + expr)
 
         return res
 
@@ -191,8 +212,8 @@ class MyWindow(QMainWindow):
         self.cmd_buffer_len = 0
         self.output_area.setText(self.cmd_buffer)
 
-    def shit_happens(self):
-        self.print_output("<a href='#log_remind'><i>Ошибка!</i></a>")
+    def shit_happens(self, msg):
+        self.print_output("<a href='#log_remind'><i>Ошибка!</i></a> — " + msg)
         self.statusbar.addWidget(self.error_desc)
 
     def remind_about_log(self):
@@ -217,7 +238,8 @@ def handel_exceptions(type_, value, tback):
     error_expr = window.input_area.text()
     logging.error(error_msg + 'Current expression: ' + error_expr + '\n')
     sys.__excepthook__(type_, value, tback)
-    window.shit_happens()
+    last_line = error_msg[:-1].rindex("\n")
+    window.shit_happens(error_msg[last_line+1:-1])
 
 
 if __name__ == '__main__':
