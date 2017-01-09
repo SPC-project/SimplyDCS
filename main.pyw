@@ -22,6 +22,7 @@ class MyWindow(QMainWindow):
     CMD_PREFIX = '<b>⇒</b>'
     # Константы для парсинга выражений
     Plt_pattern = re.compile('^plot\(.*\)')
+    Ltx_pattern = re.compile('^latex\(.*\)')
     LTr_pattern = re.compile('^laplace_transform\(.*\)')
     LTr_params = ", t, s, noconds=True"  # для работы laplace_transform
     InvLTr_pattern = re.compile('inverse_laplace_transform\(.*\)')
@@ -33,7 +34,7 @@ class MyWindow(QMainWindow):
     # Notes about patterns:
     # - Use '\*\*' as exponentiation operator (sympy use it)
     # - Escape python's regex's special symbols: '\(', '\)', '\+'
-    num_pat = "(pi|E|\d+\.\d+)"
+    num_pat = "(pi|E|\d+\.?\d+)"
     # 1/(s-+a) -> z/(z-exp(+-aT)
     ZTr_tabble1 = re.compile("1\.0/\(s [+-] " + num_pat + "\)")
     # s/(s^2 + b^2) -> ( z^2 - z*cos(bT) ) / ( z^2 - 2*z*cos(bT) + 1 )
@@ -54,6 +55,9 @@ class MyWindow(QMainWindow):
     ZTr_tabble_ecos = re.compile(ZTr_ecos_nom + "/\(s\*\*2 \+ " + num_pat +
                                  "\*s \+ " + num_pat + "\)")
     Excessive_zeroes = re.compile("\.0+")
+    Excessive_ones1 = re.compile("^1\.0\*")
+    Excessive_ones2 = re.compile(" 1\.0\*")
+    Excessive_ones3 = re.compile("\(1\.0\*")
 
     def __init__(self):
         super(MyWindow, self).__init__()
@@ -76,6 +80,7 @@ class MyWindow(QMainWindow):
         self.cmd_buffer = ""
         self.cmd_buffer_len = 0
         self.error_desc = QLabel("Произошла ошибка!")
+        self.do_latex_output = False
 
         self.show()
 
@@ -94,8 +99,12 @@ class MyWindow(QMainWindow):
         elif text in self.variables:
             result = self.variables[text]
         elif re.search(self.Plt_pattern, text):
-            text = text[5:-1]
+            text = text[5:-1].strip()
             self.plot(text)
+        elif re.search(self.Ltx_pattern, text):
+            text = text[6:-1].strip()
+            self.do_latex_output = True
+            result = self.parse_expr(text)
         else:
             # Other command
             result = self.parse_expr(text)
@@ -174,6 +183,12 @@ class MyWindow(QMainWindow):
 
         return expr, expr_coef
 
+    def strip_mul_one(self, expr):
+        expr = re.sub(self.Excessive_ones1, '', expr)
+        expr = re.sub(self.Excessive_ones2, ' ', expr)
+        expr = re.sub(self.Excessive_ones3, '(', expr)
+        return expr
+
     def table_forward_z_transform(self, expr):
         """
         expr - объект SymPy
@@ -182,7 +197,7 @@ class MyWindow(QMainWindow):
         expr, expr_coef = self.prepare_table_expression(expr)
 
         res = ""
-        expr = str(expr)
+        expr = self.strip_mul_one(str(expr))
         if expr == "1/s":
             res = "z/(z-1)"
         elif expr == "s**(-2)" or expr == "1/s**2":
@@ -263,21 +278,19 @@ class MyWindow(QMainWindow):
         return nom_coef / denom_coef
 
     def strip_zeroes(self, expr):
+        """ Вырезать дробный хвост, если там одни нули """
         expr = re.sub(self.Excessive_zeroes, '', expr)
         return expr
 
     def output(self, sympy_obj):
-        # TODO LaTeX here
-        plt.text(0, 0.6, "${}$".format(sympy.latex(sympy_obj)), fontsize=30)
-        fig = plt.gca()
-        fig.axes.get_xaxis().set_visible(False)
-        fig.axes.get_yaxis().set_visible(False)
-        # plt.draw()  # or savefig
-        # plt.show()
-
         output = self.strip_zeroes(str(sympy_obj))
         output = re.sub(r"\*\*", "^", output)  # '^' for exponentiation
+
         self.print_output(output)
+
+        if self.do_latex_output:
+            self.latex_output(self.strip_zeroes(sympy.latex(sympy_obj)))
+            self.do_latex_output = False
 
     def print_output(self, text):
         self.cmd_buffer += "<p>" + self.CMD_PREFIX + " " + text + "</p>"
@@ -292,6 +305,14 @@ class MyWindow(QMainWindow):
         self.output_area.setText(self.cmd_buffer)
         it = self.output_area.verticalScrollBar()
         it.setValue(it.maximum())
+
+    def latex_output(self, output):
+        plt.text(0, 0.6, "${}$".format(output), fontsize=24)
+        fig = plt.gca()
+        fig.axes.get_xaxis().set_visible(False)
+        fig.axes.get_yaxis().set_visible(False)
+        plt.draw()  # or savefig
+        plt.show()
 
     def clear_cmd_buffer(self):
         self.cmd_buffer = ""
