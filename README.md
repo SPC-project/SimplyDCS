@@ -21,6 +21,8 @@ Regular-Divider
     + ( E + pi + exp(2) ).evalf() ⇒ 13.2489305809795
 - **integrate**(*expr*, *var*) — символьное интегрирование
     + integrate(cos(x), x) ⇒ sin(x)
+- **integrate**(*expr*, (*var*, *lower limit*, *upper limit*))
+    + integrate(exp(-x), (x, 0, oo)) ⇒ 1
 
 ##### Запуск
 Для работы программы необходимы (в скобках - версии ПО, которые используются при отладке):
