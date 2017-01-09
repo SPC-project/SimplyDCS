@@ -5,14 +5,16 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QMessageBox
 from PyQt5.QtWidgets import QDialog
 from PyQt5 import uic
 
+import matplotlib.pyplot as plt
 import sympy
 from sympy.parsing import sympy_parser
-from sympy import exp, sin, cos, pi, E, I
 
 import sys
 import re
 import logging
 from traceback import format_exception
+
+PRECISION_LEVEL = 0.00001
 
 
 class MyWindow(QMainWindow):
@@ -27,10 +29,30 @@ class MyWindow(QMainWindow):
     ZTr_name = "z_transform"
     ZTr_offset = len(ZTr_name)
     ZTr_pattern = re.compile("^" + ZTr_name + "\(.*\)")
-    num_pat = "(pi|E|[0-9]+)"
-    ZTr_tabble1 = re.compile("^1/\(s [+-] " + num_pat + "\)$")
-    ZTr_tabble_cos = re.compile("^s/\(s\*\*2 \+ " + num_pat + "\)$")
-    ZTr_tabble_sin = re.compile("^1/\(s\*\*2 \+ " + num_pat + "\)$")
+
+    # Notes about patterns:
+    # - Use '\*\*' as exponentiation operator (sympy use it)
+    # - Escape python's regex's special symbols: '\(', '\)', '\+'
+    num_pat = "(pi|E|\d+\.\d+)"
+    # 1/(s-+a) -> z/(z-exp(+-aT)
+    ZTr_tabble1 = re.compile("1\.0/\(s [+-] " + num_pat + "\)")
+    # s/(s^2 + b^2) -> ( z^2 - z*cos(bT) ) / ( z^2 - 2*z*cos(bT) + 1 )
+    ZTr_tabble_cos = re.compile("s/\(s\*\*2 \+ " + num_pat + "\)")
+    # b/(s^2 + b^2) -> z*sin(bT) / ( z^2 - 2*z*cos(bT) + 1 )
+    ZTr_tabble_sin = re.compile("1\.0/\(s\*\*2 \+ " + num_pat + "\)")
+    # b/((s+a)^2) + b^2) ->
+    #         z*exp(-aT)*sin(bT) / (z^2 - 2*z*exp(-aT)*cos(bT) + exp(-2aT))
+    # Note:
+    # 1. 'b' will be removed as constant multiplier in
+    #   table_forward_z_transform()
+    # 2. sympy will expand denominator to s^2 + 2*a*s + (b^2+a^2)
+    ZTr_tabble_esin = re.compile("1\.0/\(s\*\*2 \+ " + num_pat + "\*s \+ " +
+                                 num_pat + "\)")
+    ZTr_tabble_esin_supplemental = re.compile(num_pat + "\*s")
+    # (s+a) / ( (s+a)^2 + b^2 )
+    ZTr_ecos_nom = "\(s \+ " + num_pat + "\)"
+    ZTr_tabble_ecos = re.compile(ZTr_ecos_nom + "/\(s\*\*2 \+ " + num_pat +
+                                 "\*s \+ " + num_pat + "\)")
 
     def __init__(self):
         super(MyWindow, self).__init__()
@@ -43,8 +65,10 @@ class MyWindow(QMainWindow):
         self.output_area.anchorClicked.connect(self.remind_about_log)
 
         self.variables = {
-            't': sympy.Symbol('t', positive=True),
-            'T': sympy.Symbol('T', positive=True),
+            't': sympy.Symbol(
+                't', positive=True),
+            'T': sympy.Symbol(
+                'T', positive=True),
             's': sympy.Symbol('s'),
             'z': sympy.Symbol('z')
         }
@@ -56,6 +80,7 @@ class MyWindow(QMainWindow):
 
     def process_input(self):
         """ Приложение реагирует на пользовательскую команду """
+
         self.input_area.selectAll()
         text = self.input_area.text()
         result = None
@@ -81,13 +106,13 @@ class MyWindow(QMainWindow):
         # laplace_transform preparation
         match = re.search(self.LTr_pattern, expr)
         if match:
-            i = match.end()-1
+            i = match.end() - 1
             expr = expr[:i] + self.LTr_params + expr[i:]
 
         # inverse_laplace_transform preparation
         match = re.search(self.InvLTr_pattern, expr)
         if match:
-            i = match.end()-1
+            i = match.end() - 1
             expr = expr[:i] + self.InvLTr_params + expr[i:]
 
         # Z-transform
@@ -105,7 +130,7 @@ class MyWindow(QMainWindow):
     def assign_action(self, text):
         name_len = text.index('=')
         name = text[:name_len].strip()
-        expr = text[name_len+1:].strip()
+        expr = text[name_len + 1:].strip()
 
         if name not in self.variables:
             self.variables[name] = sympy.var(name)
@@ -116,47 +141,54 @@ class MyWindow(QMainWindow):
 
     def forward_z_transform(self, to_transform_expr):
         """ Разложить на простые множители и каждый заменить по таблице """
-        command = "apart(collect(simplify(" + to_transform_expr + "), s), s)"
-        expr = self.parse_expr(command)
+        cmd_start = "apart(collect(simplify("
+        cmd_end = "), s), s).evalf()"
+        expr = self.parse_expr(cmd_start + to_transform_expr + cmd_end)
         res = ""
         if isinstance(expr, sympy.Add):
             for summand in expr.args:
                 if summand.is_number:  # deal with constants
-                    raise ValueError("Получили константу в z-преобразовании: "
-                                     + str(expr))
+                    raise ValueError("Получили константу в z-преобразовании: " +
+                                     str(expr))
 
                 res += self.table_forward_z_transform(summand)
         else:
             res = self.table_forward_z_transform(expr)
 
-        if res[0] == '+':
+        if res[1] == '+':
             res = res[2:]  # remove lead '+'
 
         return res
 
-    def table_forward_z_transform(self, expr):
-        """ expr - объект SymPy """
-        res = " + "
-        expr_coef = None
-        if isinstance(expr, sympy.Mul):
-            for arg in expr.args:
-                if arg.is_number:
-                    if arg != 1:
-                        expr = expr / arg
-                        expr_coef = arg
-                        if arg < 0:  # change '+ <expr>' to '- <expr>'
-                            res = str(arg) + "*"
-                        else:
-                            res += str(arg) + "*"
+    def prepare_table_expression(self, expr):
+        if not isinstance(expr, sympy.Mul):
+            return expr, 1
 
+        expr_coef = 1
+        for arg in expr.args:
+            if arg.is_number:  # It should be only one numerical coefficient
+                if abs(arg - 1.0) > PRECISION_LEVEL:
+                    expr = expr / arg
+                    expr_coef = arg
+
+        return expr, expr_coef
+
+    def table_forward_z_transform(self, expr):
+        """
+        expr - объект SymPy
+        Сверяем с эталонными значениями и, если совпало, преобразовываем по шаблону
+        """
+        expr, expr_coef = self.prepare_table_expression(expr)
+
+        res = ""
         expr = str(expr)
         if expr == "1/s":
-            res += "z/(z-1)"
+            res = "z/(z-1)"
         elif expr == "s**(-2)" or expr == "1/s**2":
-            res += "T*z/(z-1)^2"
+            res = "T*z/(z-1)^2"
         elif expr == "s**(-3)" or expr == "1/s**3":
-            res += "T^2*z*(z+1)/(z-1)^3"
-        elif re.search(self.ZTr_tabble1, expr):
+            res = "T^2*z*(z+1)/(z-1)^3"
+        elif self.ZTr_tabble1.fullmatch(expr):
             coef = expr[5:-1]
             # Swap sign because table says to do it
             if coef[0] == '+':
@@ -164,32 +196,79 @@ class MyWindow(QMainWindow):
             else:
                 coef = "+" + coef[1:]
             res += "z/(z-exp(" + coef + "*T))"
-        elif re.search(self.ZTr_tabble_cos, expr):
+        elif self.ZTr_tabble_cos.fullmatch(expr):
             coef = expr[10:-1]  # get number; 10: length of 's/(s**2 + '
             coef = 'sqrt(' + str(coef) + ')'
             cos_ = "cos(" + coef + "*T)"
-            res += "(z^2 - z*" + cos_ + ") / (z^2 - 2*z*" + cos_ + " + 1)"
-        elif re.search(self.ZTr_tabble_sin, expr):
-            coef = expr[10:-1]  # get number; 10: '1/(s**2 + '
-            if coef == "1" and not expr_coef:
-                # ignore added previously to 'res' 'expr_coef'
+            res = "(z^2 - z*" + cos_ + ") / (z^2 - 2*z*" + cos_ + " + 1)"
+        elif self.ZTr_tabble_sin.fullmatch(expr):
+            coef = expr[12:-1]  # get number; 10: '1.0/(s**2 + '
+            if coef == "1" and expr_coef == 1:
                 res = "z*sin(T) / (z^2 - 2*z*cos(T) + 1)"
             elif expr_coef:
-                delta = abs(sympy.sqrt(float(coef)) - expr_coef)
-                if delta < 0.00001:
-                    # ignore added previously to 'res' 'expr_coef'
-                    b = str(expr_coef)
-                    res = "z*sin(" + b + "*T) "
-                    res += "/ (z^2 - 2*z*cos(" + b + "*T) + 1)"
-            else:
-                raise ValueError("Не известно как преобразовать: " + expr)
+                coef = sympy.sqrt(float(coef))
+
+                expr_coef = self.check_coef(expr_coef, coef)
+
+                b = str(expr_coef)
+                res = "z*sin(" + b + "*T) "
+                res += "/ (z^2 - 2*z*cos(" + b + "*T) + 1)"
+        elif self.ZTr_tabble_esin.fullmatch(expr):
+            pos = re.search(self.ZTr_tabble_esin_supplemental, expr)
+            a_coef = float(expr[pos.start():pos.end() - 2]) / 2.0
+            b_coef = sympy.sqrt(float(expr[pos.end() + 3:-1]) - a_coef**2)
+
+            expr_coef = self.check_coef(expr_coef, b_coef)
+
+            a_coef = str(a_coef)
+            b_coef = str(b_coef)
+            nominator = "z*exp(-{}*T)*sin({}*T)"
+            denominator = "z^2 - 2*z*exp(-{}*T)*cos({}*T) + exp(-2*{}*T)"
+            res = nominator.format(a_coef, b_coef) + "/ ("
+            res += denominator.format(a_coef, b_coef, a_coef) + ")"
+        elif self.ZTr_tabble_ecos.fullmatch(expr):
+            a_coef = expr[5:expr.index(')')]  # len('(s + ')
+            b_coef = expr[expr.rindex('+')+2:-1]
+
+            arg_a = a_coef + "*T"
+            a_coef = float(a_coef)
+            b_coef = float(b_coef)
+            b_coef = sympy.sqrt(b_coef - a_coef**2)
+            arg_b = str(b_coef) + "*T"
+            nominator = "(z^2 - z*exp(-{})*cos({}))"
+            denominator = "(z^2 - 2*z*exp(-{})*cos({}) + exp(-2*{}))"
+            res = nominator.format(arg_a, arg_b) + "/ ("
+            res += denominator.format(arg_a, arg_b, arg_a) + ")"
         else:
-            raise ValueError("Не ясно как преобразовать: " + expr)
+            raise ValueError("Нет правила для преобразования: " + expr)
+
+        if expr_coef == 1:
+            res = " + " + res
+        elif expr_coef == -1:
+            res = " - " + res
+        else:
+            if expr_coef < 0:
+                res = str(expr_coef) + "*" + res
+            else:
+                res = " + " + str(expr_coef) + "*" + res
 
         return res
 
+    def check_coef(self, nom_coef, denom_coef):
+        delta = abs(nom_coef - denom_coef)
+        if delta < PRECISION_LEVEL:
+            return nom_coef
+
+        return nom_coef / denom_coef
+
     def output(self, sympy_obj):
         # TODO LaTeX here
+        plt.text(0, 0.6, "${}$".format(sympy.latex(sympy_obj)), fontsize=30)
+        fig = plt.gca()
+        fig.axes.get_xaxis().set_visible(False)
+        fig.axes.get_yaxis().set_visible(False)
+        # plt.draw()  # or savefig
+        # plt.show()
 
         output = str(sympy_obj)
         output = re.sub(r"\*\*", "^", output)  # '^' for exponentiation
@@ -202,10 +281,12 @@ class MyWindow(QMainWindow):
             mov1 = 6  # length of '<p><b>' - need to maintain cmd_buffer
             mov2 = 3  # length of '\p>
             second_cmd_start = self.cmd_buffer[mov1:].index(self.CMD_PREFIX)
-            self.cmd_buffer = self.cmd_buffer[second_cmd_start+mov2:]
+            self.cmd_buffer = self.cmd_buffer[second_cmd_start + mov2:]
             self.cmd_buffer_len = self.CMD_BUFF_MAX_LEN
 
         self.output_area.setText(self.cmd_buffer)
+        it = self.output_area.verticalScrollBar()
+        it.setValue(it.maximum())
 
     def clear_cmd_buffer(self):
         self.cmd_buffer = ""
@@ -227,7 +308,7 @@ class MyWindow(QMainWindow):
         help_you.exec_()
 
     def plot(self, expr):
-        print(expr)
+        pass
 
 
 def handel_exceptions(type_, value, tback):
@@ -239,13 +320,13 @@ def handel_exceptions(type_, value, tback):
     logging.error(error_msg + 'Current expression: ' + error_expr + '\n')
     sys.__excepthook__(type_, value, tback)
     last_line = error_msg[:-1].rindex("\n")
-    window.shit_happens(error_msg[last_line+1:-1])
+    window.shit_happens(error_msg[last_line + 1:-1])
 
 
 if __name__ == '__main__':
     log_format = '[%(asctime)s]  %(message)s'
-    logging.basicConfig(format=log_format, level=logging.ERROR,
-                        filename='errors.log')
+    logging.basicConfig(
+        format=log_format, level=logging.ERROR, filename='errors.log')
 
     app = QApplication(sys.argv)
     window = MyWindow()
