@@ -53,6 +53,7 @@ class MyWindow(QMainWindow):
     ZTr_ecos_nom = "\(s \+ " + num_pat + "\)"
     ZTr_tabble_ecos = re.compile(ZTr_ecos_nom + "/\(s\*\*2 \+ " + num_pat +
                                  "\*s \+ " + num_pat + "\)")
+    Excessive_zeroes = re.compile("\.0+")
 
     def __init__(self):
         super(MyWindow, self).__init__()
@@ -261,6 +262,10 @@ class MyWindow(QMainWindow):
 
         return nom_coef / denom_coef
 
+    def strip_zeroes(self, expr):
+        expr = re.sub(self.Excessive_zeroes, '', expr)
+        return expr
+
     def output(self, sympy_obj):
         # TODO LaTeX here
         plt.text(0, 0.6, "${}$".format(sympy.latex(sympy_obj)), fontsize=30)
@@ -270,7 +275,7 @@ class MyWindow(QMainWindow):
         # plt.draw()  # or savefig
         # plt.show()
 
-        output = str(sympy_obj)
+        output = self.strip_zeroes(str(sympy_obj))
         output = re.sub(r"\*\*", "^", output)  # '^' for exponentiation
         self.print_output(output)
 
