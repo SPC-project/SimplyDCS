@@ -1,4 +1,4 @@
-Regular-Divider
+SimplyDCS
 ===============
 
 ###### (проект разрабатывается студентами кафедры [СПУ](http://www.kpispu.info/ru/about) [НТУ "ХПИ"](http://www.kpi.kharkov.ua/ru/))
