@@ -21,7 +21,7 @@ class MyWindow(QMainWindow):
     CMD_BUFF_MAX_LEN = 25
     CMD_PREFIX = '<b>⇒</b>'
     # Константы для парсинга выражений
-    #Plt_pattern = re.compile('^plot\(.*\)')
+    Plt_pattern = re.compile('^plot\(.*\)')
     Ltx_pattern = re.compile('^latex\(.*\)')
     LTr_pattern = re.compile('^laplace_transform\(.*\)')
     LTr_params = ", t, s, noconds=True"  # для работы laplace_transform
@@ -100,9 +100,9 @@ class MyWindow(QMainWindow):
             self.textBrowser_2.append( result  )
         elif text in self.variables:
             result = self.variables[text]
-#        elif re.search(self.Plt_pattern, text):
-#            text = text[5:-1].strip()
-#           self.plot(text)
+        elif re.search(self.Plt_pattern, text):
+            text = text[5:-1].strip()
+            self.plot(text)
         elif re.search(self.Ltx_pattern, text):
             text = text[6:-1].strip()
             self.do_latex_output = True
@@ -225,7 +225,7 @@ class MyWindow(QMainWindow):
             res = "(z^2 - z*" + cos_ + ") / (z^2 - 2*z*" + cos_ + " + 1)"
         elif self.ZTr_tabble_sin.fullmatch(expr):
             coef = expr[10:-1]  # get number; 10: '1/(s**2 + '
-            
+
             if coef == "1" and expr_coef == 1:
                 res = "z*sin(T) / (z^2 - 2*z*cos(T) + 1)"
             elif expr_coef:
@@ -340,9 +340,11 @@ class MyWindow(QMainWindow):
         uic.loadUi('ui/help.ui', help_you)
         help_you.exec_()
 
-    def plot(self, expr):
-        pass
-
+    def plot(self, expr, discretization=False):
+        if discretization:  # Получить из N точек expr с шагом discretization
+            pass
+        else:               # Просто рисовать непрерывный граффик
+            pass
 
 def handel_exceptions(type_, value, tback):
     """
