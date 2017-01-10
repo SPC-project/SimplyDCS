@@ -11,7 +11,7 @@ Regular-Divider
 - **plot**(*expr*) — построить график для *expr*
 - **symplify**(*expr*) — упростить *expr*
     + simplify( *sin(t)^2 + cos(t)^2* ) ⇒ 1
-    + simplify( *(x^3 + x^2 - x - 1)/(x^2 + 2\*x + 1)* ) ⇒ x-1
+    + simplify( (x^3 + x^2 - x - 1)/(x^2 + 2\*x + 1) ) ⇒ x-1
 - **expand**(*expr*) — раскрыть скобки в *expr*
 - **factor**(*expr*) — "складывает" полином
     + factor( *x^3 - x^2 + x - 1* ) ⇒ (x-1)*(x^2+1)
