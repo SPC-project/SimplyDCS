@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>569</width>
-    <height>349</height>
+    <width>533</width>
+    <height>415</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,7 +18,7 @@
     <rect>
      <x>10</x>
      <y>9</y>
-     <width>551</width>
+     <width>501</width>
      <height>31</height>
     </rect>
    </property>
@@ -43,27 +43,11 @@
     <rect>
      <x>10</x>
      <y>50</y>
-     <width>225</width>
-     <height>84</height>
+     <width>501</width>
+     <height>351</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
-    <item>
-     <widget class="QLabel" name="label_2">
-      <property name="font">
-       <font>
-        <family>Nimbus Mono PS</family>
-        <pointsize>9</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>laplace_transform(&lt;i&gt;expr&lt;/i&gt;)</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-      </property>
-     </widget>
-    </item>
     <item>
      <widget class="QLabel" name="label_3">
       <property name="font">
@@ -73,29 +57,21 @@
        </font>
       </property>
       <property name="text">
-       <string>inverse_laplace_transform(&lt;i&gt;expr&lt;/i&gt;)</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;laplace_transform&lt;/span&gt;(&lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;) — применить преобразование Лапласа к &lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;inverse_laplace_transform&lt;/span&gt;(&lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;) — обратное преобразование Лапласа&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;z_transform&lt;/span&gt;(&lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;) — Z-преобразование&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;latex&lt;/span&gt;(&lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;) — отобразить &lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt; средствами LaTeX&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;plot&lt;/span&gt;(&lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;) — построить график для &lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;symplify&lt;/span&gt;(&lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;) — упростить &lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;&lt;/li&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 2;&quot;&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;simplify( &lt;span style=&quot; font-style:italic;&quot;&gt;sin(t)^2 + cos(t)^2&lt;/span&gt; ) ⇒ 1&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;simplify( &lt;span style=&quot; font-style:italic;&quot;&gt;(x^3 + x^2 - x - 1)/(x^2 + 2\&lt;/span&gt;x + 1)* ) ⇒ x-1&lt;/li&gt;&lt;/ul&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;expand&lt;/span&gt;(&lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;) — раскрыть скобки в &lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;factor&lt;/span&gt;(&lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;) — &amp;quot;складывает&amp;quot; полином &lt;/li&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 2;&quot;&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;factor( &lt;span style=&quot; font-style:italic;&quot;&gt;x^3 - x^2 + x - 1&lt;/span&gt; ) ⇒ (x-1)*(x^2+1)&lt;/li&gt;&lt;/ul&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;collect&lt;/span&gt;(&lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;, &lt;span style=&quot; font-style:italic;&quot;&gt;var&lt;/span&gt;) — &amp;quot;собирает&amp;quot; коэффициенты при одинаковых степенях &lt;span style=&quot; font-style:italic;&quot;&gt;var&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;apart&lt;/span&gt;(&lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;) — разложить на дроби&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;.&lt;span style=&quot; font-weight:600;&quot;&gt;evalf&lt;/span&gt;() — вычислить значение &lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;&lt;/li&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 2;&quot;&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;( E + pi + exp(2) ).evalf() ⇒ 13.2489305809795&lt;/li&gt;&lt;/ul&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;integrate&lt;/span&gt;(&lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;, &lt;span style=&quot; font-style:italic;&quot;&gt;var&lt;/span&gt;) — символьное интегрирование &lt;/li&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 2;&quot;&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;integrate(cos(x), x) ⇒ sin(x)&lt;/li&gt;&lt;/ul&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;integrate&lt;/span&gt;(&lt;span style=&quot; font-style:italic;&quot;&gt;expr&lt;/span&gt;, (&lt;span style=&quot; font-style:italic;&quot;&gt;var&lt;/span&gt;, &lt;span style=&quot; font-style:italic;&quot;&gt;lower limit&lt;/span&gt;, &lt;span style=&quot; font-style:italic;&quot;&gt;upper limit&lt;/span&gt;)) &lt;/li&gt;&lt;/ul&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 2;&quot;&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;integrate(exp(-x), (x, 0, oo)) ⇒ 1&lt;/li&gt;&lt;/ul&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="alignment">
        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
       </property>
      </widget>
     </item>
-    <item>
-     <widget class="QLabel" name="label_4">
-      <property name="font">
-       <font>
-        <family>Nimbus Mono PS</family>
-        <pointsize>8</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>z_transform(&lt;i&gt;expr&lt;/i&gt;)</string>
-      </property>
-     </widget>
-    </item>
    </layout>
   </widget>
+  <zorder>horizontalLayoutWidget</zorder>
+  <zorder>verticalLayoutWidget</zorder>
+  <zorder>label</zorder>
  </widget>
- <resources/>
+ <resources>
+  <include location="recourse.qrc"/>
+ </resources>
  <connections/>
 </ui>

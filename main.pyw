@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QMessageBox
 from PyQt5.QtWidgets import QDialog
 from PyQt5 import uic
 
-import matplotlib.pyplot as plt
+from matplotlib.pyplot import *
 import sympy
 from sympy.parsing import sympy_parser
 
@@ -21,7 +21,7 @@ class MyWindow(QMainWindow):
     CMD_BUFF_MAX_LEN = 25
     CMD_PREFIX = '<b>⇒</b>'
     # Константы для парсинга выражений
-    Plt_pattern = re.compile('^plot\(.*\)')
+    #Plt_pattern = re.compile('^plot\(.*\)')
     Ltx_pattern = re.compile('^latex\(.*\)')
     LTr_pattern = re.compile('^laplace_transform\(.*\)')
     LTr_params = ", t, s, noconds=True"  # для работы laplace_transform
@@ -34,20 +34,20 @@ class MyWindow(QMainWindow):
     # Notes about patterns:
     # - Use '\*\*' as exponentiation operator (sympy use it)
     # - Escape python's regex's special symbols: '\(', '\)', '\+'
-    num_pat = "(pi|E|\d+\.?\d+)"
+    num_pat = "(pi|E|\d+\.?\d*)"
     # 1/(s-+a) -> z/(z-exp(+-aT)
-    ZTr_tabble1 = re.compile("1\.0/\(s [+-] " + num_pat + "\)")
+    ZTr_tabble1 = re.compile("1/\(s [+-] " + num_pat + "\)")
     # s/(s^2 + b^2) -> ( z^2 - z*cos(bT) ) / ( z^2 - 2*z*cos(bT) + 1 )
     ZTr_tabble_cos = re.compile("s/\(s\*\*2 \+ " + num_pat + "\)")
     # b/(s^2 + b^2) -> z*sin(bT) / ( z^2 - 2*z*cos(bT) + 1 )
-    ZTr_tabble_sin = re.compile("1\.0/\(s\*\*2 \+ " + num_pat + "\)")
+    ZTr_tabble_sin = re.compile("1/\(s\*\*2 \+ " + num_pat + "\)")
     # b/((s+a)^2) + b^2) ->
     #         z*exp(-aT)*sin(bT) / (z^2 - 2*z*exp(-aT)*cos(bT) + exp(-2aT))
     # Note:
     # 1. 'b' will be removed as constant multiplier in
     #   table_forward_z_transform()
     # 2. sympy will expand denominator to s^2 + 2*a*s + (b^2+a^2)
-    ZTr_tabble_esin = re.compile("1\.0/\(s\*\*2 \+ " + num_pat + "\*s \+ " +
+    ZTr_tabble_esin = re.compile("1/\(s\*\*2 \+ " + num_pat + "\*s \+ " +
                                  num_pat + "\)")
     ZTr_tabble_esin_supplemental = re.compile(num_pat + "\*s")
     # (s+a) / ( (s+a)^2 + b^2 )
@@ -58,6 +58,7 @@ class MyWindow(QMainWindow):
     Excessive_ones1 = re.compile("^1\.0\*")
     Excessive_ones2 = re.compile(" 1\.0\*")
     Excessive_ones3 = re.compile("\(1\.0\*")
+
 
     def __init__(self):
         super(MyWindow, self).__init__()
@@ -96,11 +97,12 @@ class MyWindow(QMainWindow):
 
         if '=' in text:  # TODO: будут ошибки в выражениях со сравнением: "=="
             result = self.assign_action(text)
+            self.textBrowser_2.append( result  )
         elif text in self.variables:
             result = self.variables[text]
-        elif re.search(self.Plt_pattern, text):
-            text = text[5:-1].strip()
-            self.plot(text)
+#        elif re.search(self.Plt_pattern, text):
+#            text = text[5:-1].strip()
+#           self.plot(text)
         elif re.search(self.Ltx_pattern, text):
             text = text[6:-1].strip()
             self.do_latex_output = True
@@ -130,6 +132,7 @@ class MyWindow(QMainWindow):
         if match:
             i = match.start() + self.ZTr_offset + 1  # +1 for '(' symbol
             j = match.end() - 1
+            print(expr)
             expr = self.forward_z_transform(expr[i:j])
 
         # use Python's exponentiation operator
@@ -154,6 +157,7 @@ class MyWindow(QMainWindow):
         cmd_start = "apart(collect(simplify("
         cmd_end = "), s), s).evalf()"
         expr = self.parse_expr(cmd_start + to_transform_expr + cmd_end)
+        print(expr)
         res = ""
         if isinstance(expr, sympy.Add):
             for summand in expr.args:
@@ -198,6 +202,8 @@ class MyWindow(QMainWindow):
 
         res = ""
         expr = self.strip_mul_one(str(expr))
+        expr = self.strip_zeroes(expr)
+        print(expr)
         if expr == "1/s":
             res = "z/(z-1)"
         elif expr == "s**(-2)" or expr == "1/s**2":
@@ -218,7 +224,8 @@ class MyWindow(QMainWindow):
             cos_ = "cos(" + coef + "*T)"
             res = "(z^2 - z*" + cos_ + ") / (z^2 - 2*z*" + cos_ + " + 1)"
         elif self.ZTr_tabble_sin.fullmatch(expr):
-            coef = expr[12:-1]  # get number; 10: '1.0/(s**2 + '
+            coef = expr[10:-1]  # get number; 10: '1/(s**2 + '
+            
             if coef == "1" and expr_coef == 1:
                 res = "z*sin(T) / (z^2 - 2*z*cos(T) + 1)"
             elif expr_coef:
@@ -307,12 +314,12 @@ class MyWindow(QMainWindow):
         it.setValue(it.maximum())
 
     def latex_output(self, output):
-        plt.text(0, 0.6, "${}$".format(output), fontsize=24)
-        fig = plt.gca()
+        text(0, 0.6, "${}$".format(output), fontsize=24)
+        fig = gca()
         fig.axes.get_xaxis().set_visible(False)
         fig.axes.get_yaxis().set_visible(False)
-        plt.draw()  # or savefig
-        plt.show()
+        draw()  # or savefig
+        show()
 
     def clear_cmd_buffer(self):
         self.cmd_buffer = ""

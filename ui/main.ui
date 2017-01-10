@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>742</width>
-    <height>432</height>
+    <height>425</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -22,7 +22,7 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0">
-     <layout class="QHBoxLayout" name="horizontalLayout" stretch="7,3">
+     <layout class="QHBoxLayout" name="horizontalLayout" stretch="7,0">
       <item>
        <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0">
         <item>
@@ -44,12 +44,9 @@
        </layout>
       </item>
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout" stretch="8,2">
+       <layout class="QVBoxLayout" name="verticalLayout" stretch="0">
         <item>
          <widget class="QTextBrowser" name="textBrowser_2"/>
-        </item>
-        <item>
-         <widget class="QListWidget" name="listWidget"/>
         </item>
        </layout>
       </item>
@@ -63,7 +60,7 @@
      <x>0</x>
      <y>0</y>
      <width>742</width>
-     <height>30</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
@@ -99,7 +96,7 @@
     <enum>TopToolBarArea</enum>
    </attribute>
    <attribute name="toolBarBreak">
-    <bool>true</bool>
+    <bool>false</bool>
    </attribute>
    <addaction name="m_save"/>
    <addaction name="m_clear"/>
@@ -172,8 +169,9 @@
   <tabstop>input_area</tabstop>
   <tabstop>output_area</tabstop>
   <tabstop>textBrowser_2</tabstop>
-  <tabstop>listWidget</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="recourse.qrc"/>
+ </resources>
  <connections/>
 </ui>
