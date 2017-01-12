@@ -28,6 +28,7 @@ class MyWindow(QMainWindow):
     InvLTr_pattern = 'inverse_laplace_transform('
     InvLTr_params = ", s, t"  # для работы inverse_laplace_transform
     ZTr_pattern = "z_transform("
+    ZITr_pattern = "inverse_z_transform("
 
     # Notes about patterns:
     # - Use '\*\*' as exponentiation operator (sympy use it)
@@ -137,8 +138,15 @@ class MyWindow(QMainWindow):
             else:
                 expr = self.forward_z_transform(expr)
 
+        # Inverse Z-transform
+        if expr.startswith(self.ZITr_pattern):
+            i = len(self.ZITr_pattern)
+            expr = expr[i:-1]
+            expr = self.inverse_z_transform(expr)
+
         # use Python's exponentiation operator
         expr = re.sub(r"\^", "**", expr)
+        expr = re.sub("δ", "KroneckerDelta", expr)
 
         return sympy_parser.parse_expr(expr, local_dict=self.variables)
 
@@ -172,6 +180,48 @@ class MyWindow(QMainWindow):
 
         if res[1] == '+':
             res = res[2:]  # remove lead '+'
+
+        return res
+
+    def inverse_z_transform(self, to_transform_expr):
+        cmd_start = "apart(collect("
+        cmd_end = ", s))"
+        expr = self.parse_expr(cmd_start + to_transform_expr + cmd_end)
+        res = ""
+        if isinstance(expr, sympy.Add):
+            for summand in expr.args:
+                res += self.table_inverse_z_transform(summand)
+        else:
+            res = self.table_inverse_z_transform(expr)
+
+        return res
+
+    def table_inverse_z_transform(self, expr):
+        expr, expr_coef = self.prepare_table_expression(expr)
+
+        res = ""
+        expr = self.strip_mul_one(str(expr))
+        expr = self.strip_zeroes(expr)
+        if expr == "1/z":
+            res = 'KroneckerDelta(T, n)'
+        elif re.match("1/z\*\*-?" + self.num_pat, expr):
+            i = expr.rindex('*')
+            res = 'KroneckerDelta(' + expr[i:-1] + '*T, n)'
+        elif re.match("z\*\*\(-?" + self.num_pat + "\)", expr):
+            i = expr.index('(') + 1
+            if expr[i] == '-':
+                i += 1
+            res = 'KroneckerDelta(' + expr[i:-1] + '*T, n)'
+
+        if expr_coef == 1:
+            res = " + " + res
+        elif expr_coef == -1:
+            res = " - " + res
+        else:
+            if expr_coef < 0:
+                res = str(expr_coef) + "*" + res
+            else:
+                res = " + " + str(expr_coef) + "*" + res
 
         return res
 
@@ -300,6 +350,7 @@ class MyWindow(QMainWindow):
         output = self.strip_zeroes(str(sympy_obj))
         output = self.strip_digits(output)
         output = re.sub(r"\*\*", "^", output)  # '^' for exponentiation
+        output = re.sub("KroneckerDelta", 'δ', output)
 
         self.print_output(output)
 
@@ -317,6 +368,8 @@ class MyWindow(QMainWindow):
                 txt = self.strip_mul_one(txt)
                 txt = self.strip_zeroes(txt)
                 txt = self.strip_digits(txt)
+                txt = re.sub(r"\*\*", "^", txt)  # '^' for exponentiation
+                txt = re.sub("KroneckerDelta", 'δ', txt)
                 if var != 'z' and var != 't' and var != 's' and var != 'T':
                     self.assigns_browser.append(var + " = " + txt)
             self.is_assign_action = False
