@@ -5,7 +5,6 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QMessageBox
 from PyQt5.QtWidgets import QDialog
 from PyQt5 import uic
 
-from matplotlib.pyplot import *
 import sympy
 from sympy.parsing import sympy_parser
 
@@ -21,15 +20,14 @@ class MyWindow(QMainWindow):
     CMD_BUFF_MAX_LEN = 25
     CMD_PREFIX = '<b>⇒</b>'
     # Константы для парсинга выражений
-    Plt_pattern = re.compile('^plot\(.*\)')
-    Ltx_pattern = re.compile('^latex\(.*\)')
-    LTr_pattern = re.compile('^laplace_transform\(.*\)')
+    Assign_pattern = re.compile('^[a-zA-Z0-9_]* += +.*')
+    Plt_pattern = 'plot('
+    Ltx_pattern = 'latex('
+    LTr_pattern = 'laplace_transform('
     LTr_params = ", t, s, noconds=True"  # для работы laplace_transform
-    InvLTr_pattern = re.compile('inverse_laplace_transform\(.*\)')
+    InvLTr_pattern = 'inverse_laplace_transform('
     InvLTr_params = ", s, t"  # для работы inverse_laplace_transform
-    ZTr_name = "z_transform"
-    ZTr_offset = len(ZTr_name)
-    ZTr_pattern = re.compile("^" + ZTr_name + "\(.*\)")
+    ZTr_pattern = "z_transform("
 
     # Notes about patterns:
     # - Use '\*\*' as exponentiation operator (sympy use it)
@@ -59,7 +57,6 @@ class MyWindow(QMainWindow):
     Excessive_ones2 = re.compile(" 1\.0\*")
     Excessive_ones3 = re.compile("\(1\.0\*")
 
-
     def __init__(self):
         super(MyWindow, self).__init__()
         uic.loadUi('ui/main.ui', self)
@@ -69,6 +66,7 @@ class MyWindow(QMainWindow):
         self.m_clear.triggered.connect(self.clear_cmd_buffer)
         self.m_tips.triggered.connect(self.show_help)
         self.output_area.anchorClicked.connect(self.remind_about_log)
+        self.choose_mantisa_length.triggered.connect(self.customize_output)
 
         self.variables = {
             't': sympy.Symbol(
@@ -82,6 +80,8 @@ class MyWindow(QMainWindow):
         self.cmd_buffer_len = 0
         self.error_desc = QLabel("Произошла ошибка!")
         self.do_latex_output = False
+        self.is_assign_action = False
+        self.OUT_DIGIT_NUMBER = 4
 
         self.show()
 
@@ -95,15 +95,16 @@ class MyWindow(QMainWindow):
         if text.count('(') != text.count(')'):
             raise ValueError("Количество круглых скобок не совпадает!")
 
-        if '=' in text:  # TODO: будут ошибки в выражениях со сравнением: "=="
+        if re.search(self.Assign_pattern, text):
             result = self.assign_action(text)
-            self.textBrowser_2.append( result  )
+            self.is_assign_action = True
         elif text in self.variables:
             result = self.variables[text]
-        elif re.search(self.Plt_pattern, text):
+        elif text.startswith(self.Plt_pattern):
+            result = text
             text = text[5:-1].strip()
             self.plot(text)
-        elif re.search(self.Ltx_pattern, text):
+        elif text.startswith(self.Ltx_pattern):
             text = text[6:-1].strip()
             self.do_latex_output = True
             result = self.parse_expr(text)
@@ -116,24 +117,25 @@ class MyWindow(QMainWindow):
     def parse_expr(self, expr):
         """ Приводим пользовательскую команду к приемлемому SymPy виду """
         # laplace_transform preparation
-        match = re.search(self.LTr_pattern, expr)
-        if match:
-            i = match.end() - 1
-            expr = expr[:i] + self.LTr_params + expr[i:]
+        if expr.startswith(self.LTr_pattern):
+            expr = expr[:-1] + self.LTr_params + ')'
 
         # inverse_laplace_transform preparation
-        match = re.search(self.InvLTr_pattern, expr)
-        if match:
-            i = match.end() - 1
-            expr = expr[:i] + self.InvLTr_params + expr[i:]
+        if expr.startswith(self.InvLTr_pattern):
+            expr = expr[:-1] + self.InvLTr_params + ')'
 
         # Z-transform
-        match = re.search(self.ZTr_pattern, expr)
-        if match:
-            i = match.start() + self.ZTr_offset + 1  # +1 for '(' symbol
-            j = match.end() - 1
-            print(expr)
-            expr = self.forward_z_transform(expr[i:j])
+        if expr.startswith(self.ZTr_pattern):
+            i = len(self.ZTr_pattern)
+            expr = expr[i:-1]
+            if ',' in expr:
+                k = expr.index(',')
+                discretization = expr[k+1:]
+                expr = expr[:k]
+                expr = self.forward_z_transform(expr)
+                expr = '(' + expr + ').subs(T, ' + discretization + ')'
+            else:
+                expr = self.forward_z_transform(expr)
 
         # use Python's exponentiation operator
         expr = re.sub(r"\^", "**", expr)
@@ -155,9 +157,8 @@ class MyWindow(QMainWindow):
     def forward_z_transform(self, to_transform_expr):
         """ Разложить на простые множители и каждый заменить по таблице """
         cmd_start = "apart(collect(simplify("
-        cmd_end = "), s), s).evalf()"
+        cmd_end = "), s), s).evalf(" + str(self.OUT_DIGIT_NUMBER) + ")"
         expr = self.parse_expr(cmd_start + to_transform_expr + cmd_end)
-        print(expr)
         res = ""
         if isinstance(expr, sympy.Add):
             for summand in expr.args:
@@ -193,6 +194,18 @@ class MyWindow(QMainWindow):
         expr = re.sub(self.Excessive_ones3, '(', expr)
         return expr
 
+    def strip_zeroes(self, expr):
+        """ Вырезать дробный хвост, если там одни нули """
+        expr = re.sub(self.Excessive_zeroes, '', expr)
+        return expr
+
+    def strip_digits(self, expr):
+        """ Обрезать дробный хвост до self.OUT_DIGIT_NUMBER """
+        pat = '(\.\d{' + str(self.OUT_DIGIT_NUMBER) + '})\d+'
+        pat = re.compile(pat)
+
+        return re.sub(pat, r'\1', expr)
+
     def table_forward_z_transform(self, expr):
         """
         expr - объект SymPy
@@ -203,7 +216,6 @@ class MyWindow(QMainWindow):
         res = ""
         expr = self.strip_mul_one(str(expr))
         expr = self.strip_zeroes(expr)
-        print(expr)
         if expr == "1/s":
             res = "z/(z-1)"
         elif expr == "s**(-2)" or expr == "1/s**2":
@@ -284,13 +296,9 @@ class MyWindow(QMainWindow):
 
         return nom_coef / denom_coef
 
-    def strip_zeroes(self, expr):
-        """ Вырезать дробный хвост, если там одни нули """
-        expr = re.sub(self.Excessive_zeroes, '', expr)
-        return expr
-
     def output(self, sympy_obj):
         output = self.strip_zeroes(str(sympy_obj))
+        output = self.strip_digits(output)
         output = re.sub(r"\*\*", "^", output)  # '^' for exponentiation
 
         self.print_output(output)
@@ -298,6 +306,20 @@ class MyWindow(QMainWindow):
         if self.do_latex_output:
             self.latex_output(self.strip_zeroes(sympy.latex(sympy_obj)))
             self.do_latex_output = False
+        elif self.is_assign_action:
+            self.assigns_browser.clear()
+            valT = str(self.variables.get('T'))
+            if valT != 'T':
+                self.assigns_browser.append("T = " + valT)
+
+            for (var, val) in self.variables.items():
+                txt = str(val)
+                txt = self.strip_mul_one(txt)
+                txt = self.strip_zeroes(txt)
+                txt = self.strip_digits(txt)
+                if var != 'z' and var != 't' and var != 's' and var != 'T':
+                    self.assigns_browser.append(var + " = " + txt)
+            self.is_assign_action = False
 
     def print_output(self, text):
         self.cmd_buffer += "<p>" + self.CMD_PREFIX + " " + text + "</p>"
@@ -312,6 +334,13 @@ class MyWindow(QMainWindow):
         self.output_area.setText(self.cmd_buffer)
         it = self.output_area.verticalScrollBar()
         it.setValue(it.maximum())
+
+    def customize_output(self):
+        dlg = QDialog()
+        uic.loadUi('ui/preferences.ui', dlg)
+        dlg.exec_()
+        if dlg.result() == 1:
+            self.OUT_DIGIT_NUMBER = dlg.num_of_digits.value()
 
     def latex_output(self, output):
         text(0, 0.6, "${}$".format(output), fontsize=24)
@@ -345,6 +374,7 @@ class MyWindow(QMainWindow):
             pass
         else:               # Просто рисовать непрерывный граффик
             pass
+
 
 def handel_exceptions(type_, value, tback):
     """
