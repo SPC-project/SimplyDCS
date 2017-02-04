@@ -12,7 +12,8 @@ import sys
 import re
 import logging
 from traceback import format_exception
-
+from numpy import *
+from matplotlib.pyplot import *
 PRECISION_LEVEL = 0.00001
 
 
@@ -21,7 +22,7 @@ class MyWindow(QMainWindow):
     CMD_PREFIX = '<b>⇒</b>'
     # Константы для парсинга выражений
     Assign_pattern = re.compile('^[a-zA-Z0-9_]* += +.*')
-    Plt_pattern = 'plot('
+    Plt_pattern = 'plots('
     Ltx_pattern = 'latex('
     LTr_pattern = 'laplace_transform('
     LTr_params = ", t, s, noconds=True"  # для работы laplace_transform
@@ -102,8 +103,15 @@ class MyWindow(QMainWindow):
             result = self.variables[text]
         elif text.startswith(self.Plt_pattern):
             result = text
-            text = text[5:-1].strip()
-            self.plot(text)
+            self.assigns_browser.append(result)
+            text = text[6:-1].strip()
+            new_text = text.split(',')
+            self.assigns_browser.append(str(new_text))
+
+            if len(new_text) == 1:
+                self.plots(new_text[0])
+            else:
+                self.plots(new_text[0], new_text[1])
         elif text.startswith(self.Ltx_pattern):
             text = text[6:-1].strip()
             self.do_latex_output = True
@@ -130,7 +138,7 @@ class MyWindow(QMainWindow):
             expr = expr[i:-1]
             if ',' in expr:
                 k = expr.index(',')
-                discretization = expr[k+1:]
+                discretization = expr[k + 1:]
                 expr = expr[:k]
                 expr = self.forward_z_transform(expr)
                 expr = '(' + expr + ').subs(T, ' + discretization + ')'
@@ -270,7 +278,7 @@ class MyWindow(QMainWindow):
             res += denominator.format(a_coef, b_coef, a_coef) + ")"
         elif self.ZTr_tabble_ecos.fullmatch(expr):
             a_coef = expr[5:expr.index(')')]  # len('(s + ')
-            b_coef = expr[expr.rindex('+')+2:-1]
+            b_coef = expr[expr.rindex('+') + 2:-1]
 
             arg_a = a_coef + "*T"
             a_coef = float(a_coef)
@@ -379,11 +387,44 @@ class MyWindow(QMainWindow):
         uic.loadUi('ui/help.ui', help_you)
         help_you.exec_()
 
-    def plot(self, expr, discretization=False):
+    def give_data_array(self, data, expr):
+        t = sympy.symbols('t')
+        data_array = []
+        for i in data:
+            element = expr.subs({t: i})
+            data_array.append(element)
+        return data_array
+
+    def plots(self, expr, expr2=False, discretization=False):
         if discretization:  # Получить из N точек expr с шагом discretization
             pass
         else:               # Просто рисовать непрерывный граффик
-            pass
+            plotting_data = arange(0.0, 5.0, 0.5)
+
+            first_expr = expr
+            second_expr = expr2
+            self.assigns_browser.append(str(first_expr))
+            first_parse = sympy_parser.parse_expr(first_expr)
+            first_data_array = self.give_data_array(plotting_data, first_parse)
+            if second_expr is False:
+                pass
+            else:
+                self.assigns_browser.append(str(second_expr))
+                second_parse = sympy_parser.parse_expr(second_expr)
+                second_data_array = self.give_data_array(plotting_data, second_parse)
+                legend_second_text = str(second_expr)
+                plot(first_data_array, '-', label=legend_first_text, color='blue')
+                plot(second_data_array, 'ro', label=legend_second_text, color='red')
+
+            legend_first_text = str(first_expr)
+            fig = figure()
+            ax = fig.add_subplot(111)
+            grid(True)
+            plot(first_data_array)
+            legend(loc='best')
+            ax.set_title(legend_first_text)
+            show()
+
 
 
 def handel_exceptions(type_, value, tback):
