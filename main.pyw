@@ -28,7 +28,6 @@ class MyWindow(QMainWindow):
     InvLTr_pattern = 'inverse_laplace_transform('
     InvLTr_params = ", s, t"  # для работы inverse_laplace_transform
     ZTr_pattern = "z_transform("
-    ZITr_pattern = "inverse_z_transform("
 
     # Notes about patterns:
     # - Use '\*\*' as exponentiation operator (sympy use it)
@@ -180,48 +179,6 @@ class MyWindow(QMainWindow):
 
         if res[1] == '+':
             res = res[2:]  # remove lead '+'
-
-        return res
-
-    def inverse_z_transform(self, to_transform_expr):
-        cmd_start = "apart(collect("
-        cmd_end = ", s))"
-        expr = self.parse_expr(cmd_start + to_transform_expr + cmd_end)
-        res = ""
-        if isinstance(expr, sympy.Add):
-            for summand in expr.args:
-                res += self.table_inverse_z_transform(summand)
-        else:
-            res = self.table_inverse_z_transform(expr)
-
-        return res
-
-    def table_inverse_z_transform(self, expr):
-        expr, expr_coef = self.prepare_table_expression(expr)
-
-        res = ""
-        expr = self.strip_mul_one(str(expr))
-        expr = self.strip_zeroes(expr)
-        if expr == "1/z":
-            res = 'KroneckerDelta(T, n)'
-        elif re.match("1/z\*\*-?" + self.num_pat, expr):
-            i = expr.rindex('*')
-            res = 'KroneckerDelta(' + expr[i:-1] + '*T, n)'
-        elif re.match("z\*\*\(-?" + self.num_pat + "\)", expr):
-            i = expr.index('(') + 1
-            if expr[i] == '-':
-                i += 1
-            res = 'KroneckerDelta(' + expr[i:-1] + '*T, n)'
-
-        if expr_coef == 1:
-            res = " + " + res
-        elif expr_coef == -1:
-            res = " - " + res
-        else:
-            if expr_coef < 0:
-                res = str(expr_coef) + "*" + res
-            else:
-                res = " + " + str(expr_coef) + "*" + res
 
         return res
 
