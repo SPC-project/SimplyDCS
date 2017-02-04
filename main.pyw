@@ -101,6 +101,11 @@ class MyWindow(QMainWindow):
             self.is_assign_action = True
         elif text in self.variables:
             result = self.variables[text]
+        elif text.startswith("orig("):
+            inner = text[5:-1]
+            expr, num_of_nodes = inner.split(',')
+            expr = self.parse_expr(expr)
+            result = self.calc_n_points_of_original(expr, int(num_of_nodes))
         elif text.startswith(self.Plt_pattern):
             result = text
             self.assigns_browser.append(result)
@@ -144,12 +149,6 @@ class MyWindow(QMainWindow):
                 expr = '(' + expr + ').subs(T, ' + discretization + ')'
             else:
                 expr = self.forward_z_transform(expr)
-
-        # Inverse Z-transform
-        if expr.startswith(self.ZITr_pattern):
-            i = len(self.ZITr_pattern)
-            expr = expr[i:-1]
-            expr = self.inverse_z_transform(expr)
 
         # use Python's exponentiation operator
         expr = re.sub(r"\^", "**", expr)
@@ -382,6 +381,23 @@ class MyWindow(QMainWindow):
                           "Данные об ошибке записаны в файл errors.log")
         msg.exec_()
 
+    def calc_n_points_of_original(self, expr, n):
+        if n <= 0:
+            raise ValueError("Пытаемся посчитать оригинал для {} точек".format(n))
+
+        tail = 0
+        z = self.variables['z']
+        INF = sympy.oo
+        prev = sympy.limit(expr, z, INF)
+        res = [prev]
+        for i in range(n-1):
+            tail += z**(-i) * prev
+            calc_it = sympy.simplify(z**(i+1) * (expr - tail))
+            prev = sympy.limit(calc_it, z, INF)
+            res.append(prev)
+
+        return res
+
     def show_help(self):
         help_you = QDialog()
         uic.loadUi('ui/help.ui', help_you)
@@ -424,7 +440,6 @@ class MyWindow(QMainWindow):
             legend(loc='best')
             ax.set_title(legend_first_text)
             show()
-
 
 
 def handel_exceptions(type_, value, tback):
